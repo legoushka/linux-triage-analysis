@@ -1,0 +1,53 @@
+title: Apache Path Traversal RCE Attempt (CVE-2021-42013 Signature)
+id: 0b8a1b3c-7e5d-4f2a-8c1d-9e0f1a2b3c4d # Генерируйте свой уникальный UUID
+status: test
+description: |
+    Detects specific URI patterns in Apache access logs indicative of Remote Code Execution (RCE) attempts 
+    via path traversal. These patterns match signatures commonly associated with the exploitation of 
+    CVE-2021-42013 in Apache HTTP Server 2.4.50.
+    The rule looks for encoded path traversal sequences targeting /cgi-bin/ and attempting to execute shells like /bin/bash or /bin/sh.
+references:
+    - https://nvd.nist.gov/vuln/detail/CVE-2021-42013
+    - https://httpd.apache.org/security/vulnerabilities_24.html
+author: legoushka
+date: 2025-05-25
+modified: 2025-05-25
+tags:
+    - attack.initial_access
+    - attack.t1190 # Exploit Public-Facing Application
+    - attack.t1059 # Command and Scripting Interpreter
+    - cve.2021.42013
+logsource:
+    product: apache
+    category: accesslog
+detection:
+    selection_uris:
+        url.path: # Поле, содержащее путь запроса
+            # Варианты из логов и похожие (одиночное URL-кодирование: %2E для '.', %2E%2E для '..')
+            # Для /bin/bash
+            - '/cgi-bin/.%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/bin/bash' # Точное совпадение из лога (5х '..')
+            - '/cgi-bin/.%2e/%2e%2e/%2e%2e/%2e%2e/bin/bash'    # 4х '..'
+            - '/cgi-bin/.%2e/%2e%2e/%2e%2e/bin/bash'       # 3х '..'
+            - '/cgi-bin/.%2e/%2e%2e/bin/bash'          # 2х '..'
+            # Для /bin/sh (одиночное URL-кодирование)
+            - '/cgi-bin/.%2e/%2e%2e/%2e%2e/%2e%2e/%2e%2e/bin/sh'
+            - '/cgi-bin/.%2e/%2e%2e/%2e%2e/%2e%2e/bin/sh'
+            # Варианты с двойным URL-кодированием (%252E для '.', %252E%252E для '..') - характерно для CVE-2021-42013
+            # Для /bin/bash
+            - '/cgi-bin/.%252e/%252e%252e/%252e%252e/%252e%252e/%252e%252e/bin/bash'
+            - '/cgi-bin/.%252e/%252e%252e/%252e%252e/%252e%252e/bin/bash'
+            # Для /bin/sh
+            - '/cgi-bin/.%252e/%252e%252e/%252e%252e/%252e%252e/%252e%252e/bin/sh'
+            - '/cgi-bin/.%252e/%252e%252e/%252e%252e/%252e%252e/bin/sh'
+
+    filter_method:
+        http.method: 'POST'
+    filter_status_success:
+        http.response.status_code: 200 # Успешный ответ, как в логах
+
+    condition: all of selection_uris and all of filter_* # Используем 'all of filter_*' если все фильтры обязательны
+
+    falsepositives:
+    - Очень маловероятны из-за высокой специфичности сигнатур URI.
+    - Сканеры безопасности, целенаправленно тестирующие CVE-2021-42013 с этими точными путями.
+level: critical # Критический уровень, так как это явная попытка RCE.

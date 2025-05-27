@@ -1,0 +1,40 @@
+title: Suspicious Cron Job Manipulation via Command Line
+id: bd9c1a3e-7d0e-4b1b-80ae-5c2f01f559f9 # Используйте свой UUID
+status: test
+description: Detects command line attempts to create or modify cron jobs, potentially for persistence, focusing on suspicious commands.
+author: Your Name/Organization # Замените на ваше имя/организацию
+date: 2025-05-24 # Замените на актуальную дату
+modified: 2025-05-24 # Замените на актуальную дату
+tags:
+    - attack.persistence
+    - attack.t1053.003
+logsource:
+    product: linux
+    category: bash_history
+detection:
+    keywords:
+        # Редактирование crontab
+        - 'crontab -e'
+        # Загрузка crontab из файла (особенно из временных директорий)
+        - 'crontab /tmp/*'
+        - 'crontab /var/tmp/*'
+        - 'crontab /dev/shm/*'
+        # Прямое добавление команд в cron файлы через echo/printf
+        - 'echo "* * * * *" * >> /etc/cron.d/'
+        - 'echo "* * * * *" * >> /var/spool/cron/' # Может быть слишком широко
+        - 'echo "* * * * *" * >> /etc/crontab'
+        - 'printf "* * * * *" * >> /etc/cron.d/'
+        # Использование tee для записи в cron
+        - '*tee /etc/cron.d/*'
+        - '*tee /var/spool/cron/crontabs/*'
+        # Подозрительные команды внутри echo/printf, направленные в cron (примеры)
+        - 'echo "*wget *"' # Искать в сочетании с перенаправлением в cron-файл
+        - 'echo "*curl *"'
+        - 'echo "*nc *"'
+        - 'echo "*bash -i*"'
+        - 'echo "*/tmp/*"'
+    condition: keywords
+falsepositives:
+    - Легитимное администрирование системы.
+    - Скрипты установки, добавляющие cron задачи.
+level: medium

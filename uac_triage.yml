@@ -1,0 +1,64 @@
+---
+- hosts: all
+  become: yes
+  vars:
+    uac_version: "3.1.0"
+    uac_archive: "uac-{{ uac_version }}.tar.gz"
+    local_results_dir: "{{ playbook_dir }}/results"
+
+  tasks:
+    - name: Копирование архива UAC
+      ansible.builtin.copy:
+        src: "{{ uac_archive }}"
+        dest: "/tmp/{{ uac_archive }}"
+        mode: 0644
+
+    - name: Распаковка архива
+      ansible.builtin.unarchive:
+        src: "/tmp/{{ uac_archive }}"
+        dest: "/tmp"
+        remote_src: yes
+        creates: "/tmp/uac-{{ uac_version }}"
+
+    - name: Удаление архива после распаковки
+      ansible.builtin.file:
+        path: "/tmp/{{ uac_archive }}"
+        state: absent
+
+    - name: Запуск UAC
+      ansible.builtin.command:
+        cmd: ./uac -p ir_triage /tmp
+      args:
+        chdir: "/tmp/uac-{{ uac_version }}"
+
+    - name: Поиск результатов
+      ansible.builtin.find:
+        paths: /tmp
+        patterns: "uac-*.tar.gz"
+        use_regex: no
+      register: found_archives
+
+    - name: Создание локальной директории
+      delegate_to: localhost
+      ansible.builtin.file:
+        path: "{{ local_results_dir }}/{{ inventory_hostname }}"
+        state: directory
+        owner: "user"
+        group: "user"
+
+    - name: Загрузка результатов
+      ansible.builtin.fetch:
+        src: "{{ item.path }}"
+        dest: "{{ local_results_dir }}/{{ inventory_hostname }}/{{ item.path | basename }}"
+        flat: yes
+      loop: "{{ found_archives.files }}"
+      loop_control:
+        label: "{{ item.path | basename }}"
+
+    - name: Очистка временных файлов
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - "/tmp/uac-{{ uac_version }}"
+        - "{{ found_archives.files | map(attribute='path') | list }}"

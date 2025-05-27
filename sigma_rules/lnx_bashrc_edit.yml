@@ -1,0 +1,42 @@
+title: Shell Startup File Modification via Command Line for Persistence
+id: 5e2b09ac-12f8-4b9a-92f1-0c7d8f6a3e10 # Используйте свой UUID
+status: test
+description: Detects command line attempts to modify common shell startup files (.bashrc, .profile, etc.) for persistence.
+author: Your Name/Organization # Замените на ваше имя/организацию
+date: 2025-05-24 # Замените на актуальную дату
+modified: 2025-05-24 # Замените на актуальную дату
+tags:
+    - attack.persistence
+    - attack.t1546.004 # Примерно соответствует TTY Logon Scripts
+logsource:
+    product: linux
+    category: bash_history
+detection:
+    keywords:
+        # Команды, добавляющие или перезаписывающие файлы конфигурации оболочки
+        - 'echo * >> ~/.bashrc'
+        - 'echo * > ~/.bashrc' # Перезапись
+        - 'echo * >> ~/.bash_profile'
+        - 'echo * >> ~/.profile'
+        - 'echo * >> ~/.zshrc'
+        - 'echo * >> /etc/bash.bashrc' # Требует прав
+        - 'echo * >> /etc/profile'     # Требует прав
+        - 'printf * >> ~/.bashrc'
+        # Содержимое, которое часто добавляют для вредоносных целей
+        - '*wget * >> ~/.bashrc'
+        - '*curl * >> ~/.bashrc'
+        - '*nc * >> ~/.bashrc'
+        - '*bash -i* >> ~/.bashrc'
+        - '*python -c* >> ~/.bashrc'
+        - '*perl -e* >> ~/.bashrc'
+        - '*/tmp/* >> ~/.bashrc'
+        - '*base64 -d* >> ~/.bashrc'
+        # Аналогично для других файлов: .bash_profile, .profile, .zshrc, /etc/profile и т.д.
+        # Пример для .profile:
+        - '*wget * >> ~/.profile'
+        - '*curl * >> ~/.profile'
+    condition: keywords
+falsepositives:
+    - Легитимное конфигурирование пользователем своей среды.
+    - Установка ПО, модифицирующего профили оболочки.
+level: medium

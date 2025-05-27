@@ -1,0 +1,30 @@
+title: Auditd Tampering or Disabling via Command Line
+id: c3f9a0b1-0e7d-4a5c-8f21-9d0b1c6a3e22 # Используйте свой UUID
+status: test
+description: Detects command line attempts to disable or tamper with the Linux audit daemon (auditd).
+author: Your Name/Organization # Замените на ваше имя/организацию
+date: 2025-05-24 # Замените на актуальную дату
+modified: 2025-05-24 # Замените на актуальную дату
+tags:
+    - attack.defense_evasion
+    - attack.t1562.001
+logsource:
+    product: linux
+    category: bash_history
+detection:
+    keywords:
+        - 'systemctl stop auditd'
+        - 'systemctl disable auditd'
+        - 'service auditd stop'
+        - '/etc/init.d/auditd stop'
+        - 'killall auditd'
+        - 'pkill auditd'
+        - 'auditctl -e 0'  # Отключить аудит
+        - 'auditctl -D'    # Удалить все правила
+        - 'auditctl -R /etc/audit/audit.rules.empty' # Загрузка пустого набора правил
+        - 'rm /etc/audit/rules.d/*' # Удаление файлов правил
+        - '> /etc/audit/audit.rules' # Очистка файла правил
+    condition: keywords
+falsepositives:
+    - Редкие случаи легитимного администрирования (например, при серьезных проблемах с auditd).
+level: high

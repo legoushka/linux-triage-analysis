@@ -1,0 +1,54 @@
+title: Suspicious Local System Enumeration Commands
+id: f0a1b2c3-d4e5-f6a7-b8c9-d0e1f2a3b4c5 # Используйте свой UUID
+status: test
+description: Detects execution of common commands used for local system enumeration via command line.
+author: Your Name/Organization # Замените на ваше имя/организацию
+date: 2025-05-24 # Замените на актуальную дату
+modified: 2025-05-24 # Замените на актуальную дату
+tags:
+    - attack.discovery
+    - attack.t1082
+    - attack.t1057
+    - attack.t1049
+logsource:
+    product: linux
+    category: bash_history
+detection:
+    keywords:
+        # Поиск SUID/SGID файлов
+        - 'find / -perm -4000 *'
+        - 'find / -perm -u=s *'
+        - 'find / -perm -2000 *'
+        - 'find / -perm -g=s *'
+        # Доступ к чувствительным файлам
+        - 'cat /etc/shadow'
+        - 'head /etc/shadow'
+        - 'less /etc/shadow'
+        - 'strings /etc/shadow'
+        - 'cat /etc/sudoers'
+        - 'cat ~/.ssh/id_rsa'
+        - 'cat /root/.bash_history'
+        - 'cat /home/*/.bash_history' # может быть шумно
+        # Проверка прав sudo
+        - 'sudo -l'
+        # Информация о системе и сети (некоторые уже есть в lnx_shell_susp_rev_shells.yml, но здесь как отдельные индикаторы)
+        - 'uname -a; id; w' # Комбинация
+        - 'ip a; route; arp -a' # Комбинация
+        - 'netstat -anp'
+        - 'ss -tulnp'
+        - 'ps auxww' # Более детальный вывод ps
+        - 'ps -efH'
+        # Перечисление пользователей и групп
+        - 'getent passwd'
+        - 'getent group'
+        - 'cat /etc/passwd'
+        - 'cat /etc/group'
+        # Информация о запущенных сервисах / cron
+        - 'systemctl list-units --type=service --state=running'
+        - 'crontab -l'
+    condition: keywords
+falsepositives:
+    - Легитимное администрирование и отладка.
+    - Любопытные пользователи.
+    - Скрипты мониторинга (требуют добавления в исключения).
+level: medium # Может быть очень шумным без дополнительной фильтрации или контекста
