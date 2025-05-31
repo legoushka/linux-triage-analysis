@@ -74,7 +74,7 @@ def get_or_create_style(styles, name, parent=None, **kwargs):
 
 def generate_pdf_report(results: Dict[str, Dict[str, List[str]]], rules: List[Tuple[Rule, Any]], verbose: bool = False, lang: str = 'ru'):
     """Generate a PDF report of the scan results."""
-    logging.debug(f"Generating PDF report. Results: {results}") # Debug log for results
+    #logging.debug(f"Generating PDF report. Results: {results}") # Debug log for results
 
     doc = SimpleDocTemplate(
         "triage_report.pdf",
